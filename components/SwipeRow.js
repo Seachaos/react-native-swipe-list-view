@@ -39,7 +39,8 @@ class SwipeRow extends Component {
 			dimensionsSet: false,
 			hiddenHeight: 0,
 			hiddenWidth: 0,
-			translateX: new Animated.Value(0)
+			translateX: new Animated.Value(0),
+			animationHeight: new Animated.Value(1)
 		};
 	}
 
@@ -85,6 +86,30 @@ class SwipeRow extends Component {
 				this.closeRow();
 			}
 		}
+	}
+
+	removeRow ( callback ) {
+		if ( this.remove ) {
+			return;
+		}
+		this.remove = true;
+		Animated.timing(
+	       this.state.animationHeight,
+	       { toValue: 0, duration: 400 }
+	     ).start( () => {
+	     	if ( callback ) {
+	     		callback ();
+	     	}
+	     } );
+	}
+
+	restore () {
+		this.remove = false;
+		this.state.animationHeight.setValue(1);
+		this.setState( {
+			hidden: false,
+			translateX: new Animated.Value(0)
+		} );
 	}
 
 	handleOnMoveShouldSetPanResponder(e, gs) {
@@ -250,8 +275,12 @@ class SwipeRow extends Component {
 	}
 
 	render() {
+		var scaleY = this.state.animationHeight;
 		return (
-			<View style={this.props.style ? this.props.style : styles.container}>
+			<Animated.View style={ [ this.props.style ? this.props.style : styles.container, {
+				transform: [ { scaleY: scaleY } ],
+				opacity: scaleY
+			} ] }>
 				<View style={[
 					styles.hidden,
 					{
@@ -262,7 +291,7 @@ class SwipeRow extends Component {
 					{this.props.children[0]}
 				</View>
 				{this.renderRowContent()}
-			</View>
+			</Animated.View>
 		);
 	}
 
