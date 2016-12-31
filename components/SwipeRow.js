@@ -183,6 +183,10 @@ class SwipeRow extends Component {
 			}
 		}
 
+		if ( toValue != 0 ) {
+			this.props.onRowOpen && this.props.onRowOpen();
+		}
+
 		this.manuallySwipeRow(toValue);
 	}
 
