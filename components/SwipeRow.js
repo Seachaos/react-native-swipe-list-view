@@ -152,6 +152,7 @@ class SwipeRow extends Component {
 			if (this.props.stopLeftSwipe && newDX > this.props.stopLeftSwipe) { newDX = this.props.stopLeftSwipe; }
 			if (this.props.stopRightSwipe && newDX < this.props.stopRightSwipe) { newDX = this.props.stopRightSwipe; }
 
+			this.newDX = newDX;
 			this.setState({
 				translateX: new Animated.Value(newDX)
 			});
