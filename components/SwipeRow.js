@@ -105,6 +105,7 @@ class SwipeRow extends Component {
 	}
 
 	restore () {
+		this.newDX = 0;
 		this.swipeInitialX = null;
 		this.horizontalSwipeGestureBegan = false;
 
@@ -117,6 +118,9 @@ class SwipeRow extends Component {
 	}
 
 	handleOnMoveShouldSetPanResponder(e, gs) {
+		if ( this.remove ) {
+			return false;
+		}
 		const { dx } = gs;
 		return Math.abs(dx) > DIRECTIONAL_DISTANCE_CHANGE_THRESHOLD;
 	}
@@ -159,14 +163,10 @@ class SwipeRow extends Component {
 			if (this.props.stopLeftSwipe && newDX > this.props.stopLeftSwipe) {
 				newDX = this.props.stopLeftSwipe;
 				this.newDX = newDX;
-				this.swipeInitialX = null;
-				this.horizontalSwipeGestureBegan = false;
 				this.props.onRowOpen && this.props.onRowOpen();
 			} else if (this.props.stopRightSwipe && newDX < this.props.stopRightSwipe) {
 				newDX = this.props.stopRightSwipe;
 				this.newDX = newDX;
-				this.swipeInitialX = null;
-				this.horizontalSwipeGestureBegan = false;
 				this.props.onRowOpen && this.props.onRowOpen();
 			}
 			this.newDX = newDX;
@@ -193,12 +193,14 @@ class SwipeRow extends Component {
 			if (this.state.translateX._value > this.props.leftOpenValue / 2) {
 				// we're more than halfway
 				toValue = this.props.leftOpenValue;
+				return;
 			}
 		} else {
 			// trying to open left
 			if (this.state.translateX._value < this.props.rightOpenValue / 2) {
 				// we're more than halfway
 				toValue = this.props.rightOpenValue
+				return;
 			}
 		}
 
@@ -209,22 +211,20 @@ class SwipeRow extends Component {
 	 * This method is called by SwipeListView
 	 */
 	closeRow() {
-		this.restore ();
-		// this.manuallySwipeRow(0);
+		this.manuallySwipeRow(0);
 	}
 
 	manuallySwipeRow(toValue) {
+		Animated.timing(this.state.translateX,
+			{
+				toValue,
+				duration: 200
+			}
+		).start();
 		if (toValue === 0) {
-			this.restore ();
 			this.props.onRowClose && this.props.onRowClose();
 		} else {
-			Animated.timing(this.state.translateX,
-				{
-					toValue,
-					duration: 100
-				}
-			).start();
-			this.props.onRowOpen && this.props.onRowOpen();
+			
 		}
 
 		// reset everything
@@ -234,9 +234,14 @@ class SwipeRow extends Component {
 
 	renderVisibleContent() {
 		// handle touchables
-		const onPress = this.props.children[1].props.onPress;
+		var hasChildren = ( this.props.children &&
+			this.props.children.length &&
+			this.props.children.length >= 1 &&
+			this.props.children[1] );
+		const onPress = hasChildren ? this.props.children[1].props.onPress : () => {} ;
+		const body = hasChildren ? this.props.children[1] : false;
 
-		if (onPress) {
+		if ( onPress && hasChildren ) {
 			const newOnPress = _ => {
 				this.onRowPress();
 				onPress();
@@ -253,9 +258,8 @@ class SwipeRow extends Component {
 		return (
 			<TouchableOpacity
 				activeOpacity={1}
-				onPress={ _ => this.onRowPress() }
-			>
-				{this.props.children[1]}
+				onPress={ _ => this.onRowPress() } >
+				{ body }
 			</TouchableOpacity>
 		)
 
@@ -296,19 +300,20 @@ class SwipeRow extends Component {
 
 	render() {
 		var scaleY = this.state.animationHeight;
+		var body = this.props.children.length ? this.props.children[0] : false;
 		return (
 			<Animated.View style={ [ this.props.style ? this.props.style : styles.container, {
-				transform: [ { scaleY: scaleY } ]
+				transform: [ { scaleY: scaleY } ],
+				opacity: this.state.animationHeight
 			} ] }>
 				<Animated.View style={[
 					styles.hidden,
 					{
 						height: this.state.hiddenHeight,
-						width: this.state.hiddenWidth,
-						opacity: this.state.animationHeight
+						width: this.state.hiddenWidth
 					}
 				]}>
-					{this.props.children[0]}
+					{ body }
 				</Animated.View>
 				{this.renderRowContent()}
 			</Animated.View>
