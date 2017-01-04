@@ -55,10 +55,11 @@ class SwipeRow extends Component {
 	}
 
 	getPreviewAnimation(toValue, delay) {
-		return Animated.timing(
-			this.state.translateX,
-			{ duration: this.props.previewDuration, toValue, delay }
-		);
+		this.state.translateX.setValue( toValue );
+		// return Animated.timing(
+		// 	this.state.translateX,
+		// 	{ duration: this.props.previewDuration, toValue, delay }
+		// );
 	}
 
 	onContentLayout(e) {
@@ -93,7 +94,7 @@ class SwipeRow extends Component {
 			return;
 		}
 		this.remove = true;
-		Animated.timing(
+		Animated.spring(
 	       this.state.animationHeight,
 	       { toValue: 0, duration: 400 }
 	     ).start( () => {
@@ -104,11 +105,14 @@ class SwipeRow extends Component {
 	}
 
 	restore () {
+		this.swipeInitialX = null;
+		this.horizontalSwipeGestureBegan = false;
+
 		this.remove = false;
 		this.state.animationHeight.setValue(1);
+		this.state.translateX.setValue(0);
 		this.setState( {
-			hidden: false,
-			translateX: new Animated.Value(0)
+			hidden: false
 		} );
 	}
 
@@ -118,6 +122,9 @@ class SwipeRow extends Component {
 	}
 
 	handlePanResponderMove(e, gestureState) {
+		if ( this.remove ) {
+			return;
+		}
 		const { dx, dy } = gestureState;
 		const absDx = Math.abs(dx);
 		const absDy = Math.abs(dy);
@@ -149,13 +156,25 @@ class SwipeRow extends Component {
 			if (this.props.disableRightSwipe && newDX > 0) { newDX = 0; }
 
 
-			if (this.props.stopLeftSwipe && newDX > this.props.stopLeftSwipe) { newDX = this.props.stopLeftSwipe; }
-			if (this.props.stopRightSwipe && newDX < this.props.stopRightSwipe) { newDX = this.props.stopRightSwipe; }
-
+			if (this.props.stopLeftSwipe && newDX > this.props.stopLeftSwipe) {
+				newDX = this.props.stopLeftSwipe;
+				this.newDX = newDX;
+				this.swipeInitialX = null;
+				this.horizontalSwipeGestureBegan = false;
+				this.props.onRowOpen && this.props.onRowOpen();
+			} else if (this.props.stopRightSwipe && newDX < this.props.stopRightSwipe) {
+				newDX = this.props.stopRightSwipe;
+				this.newDX = newDX;
+				this.swipeInitialX = null;
+				this.horizontalSwipeGestureBegan = false;
+				this.props.onRowOpen && this.props.onRowOpen();
+			}
 			this.newDX = newDX;
-			this.setState({
-				translateX: new Animated.Value(newDX)
-			});
+			let translateX = this.state.translateX;
+			translateX.setValue( newDX );
+			// this.setState( {
+			// 	translateX: translateX
+			// } );
 
 		}
 	}
@@ -183,10 +202,6 @@ class SwipeRow extends Component {
 			}
 		}
 
-		if ( toValue != 0 ) {
-			this.props.onRowOpen && this.props.onRowOpen();
-		}
-
 		this.manuallySwipeRow(toValue);
 	}
 
@@ -194,21 +209,21 @@ class SwipeRow extends Component {
 	 * This method is called by SwipeListView
 	 */
 	closeRow() {
-		this.manuallySwipeRow(0);
+		this.restore ();
+		// this.manuallySwipeRow(0);
 	}
 
 	manuallySwipeRow(toValue) {
-		Animated.spring(this.state.translateX,
-			{
-				toValue,
-				friction: this.props.friction,
-				tension: this.props.tension
-			}
-		).start();
-
 		if (toValue === 0) {
+			this.restore ();
 			this.props.onRowClose && this.props.onRowClose();
 		} else {
+			Animated.timing(this.state.translateX,
+				{
+					toValue,
+					duration: 100
+				}
+			).start();
 			this.props.onRowOpen && this.props.onRowOpen();
 		}
 
@@ -283,18 +298,18 @@ class SwipeRow extends Component {
 		var scaleY = this.state.animationHeight;
 		return (
 			<Animated.View style={ [ this.props.style ? this.props.style : styles.container, {
-				transform: [ { scaleY: scaleY } ],
-				opacity: scaleY
+				transform: [ { scaleY: scaleY } ]
 			} ] }>
-				<View style={[
+				<Animated.View style={[
 					styles.hidden,
 					{
 						height: this.state.hiddenHeight,
 						width: this.state.hiddenWidth,
+						opacity: this.state.animationHeight
 					}
 				]}>
 					{this.props.children[0]}
-				</View>
+				</Animated.View>
 				{this.renderRowContent()}
 			</Animated.View>
 		);
